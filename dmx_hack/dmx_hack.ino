@@ -35,7 +35,9 @@ int state_change_cooldown = 2000; // minimum time (ms) between changing states
 long state_timer = 0;
 
 // temperature calibration
-int pot_adjust;
+const int num_pot_samples = 10;
+int pot_adjust[num_pot_samples];
+int pot_sample_index;
 float temp_midpoint;
 const float temp_adj_range = 3.0;         // total range of adjustment for the trimpot
 const float temp_midpoint_default = 32.0; // the temperature midpoint when trimpot is at center position
@@ -80,11 +82,18 @@ void setup() {
 void loop() {
 
    // update temperature settings
-   pot_adjust = analogRead(POT_ADJUST);
+   pot_adjust[pot_sample_index] = analogRead(POT_ADJUST);
+   pot_sample_index++;
+   pot_sample_index %= num_pot_samples;
+   int p = 0;
+   for (int i=0; i<num_pot_samples; i++) {
+      p += pot_adjust[i];
+   }
+   p /= num_pot_samples;
    temp_midpoint = mapfloat(
-      pot_adjust,
-      0,                                        // in_min
-      1023,                                     // in_max
+      p,
+      1023,                                  // in_min (inverted polarity)
+      0,                                     // in_max
       temp_midpoint_default - (temp_range/2.0), // out_min
       temp_midpoint_default + (temp_range/2.0)  // out_max
       );
