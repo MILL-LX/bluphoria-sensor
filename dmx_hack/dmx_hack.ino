@@ -2,8 +2,8 @@
 #include <Adafruit_MLX90614.h>
 #include <Adafruit_DotStar.h>
 
-#define BUTTON_UP    3
-#define BUTTON_DOWN  4
+#define BUTTON_UP    4
+#define BUTTON_DOWN  3
 #define POT_ADJUST   A0
 
 // RGB LED on Trinket M0
@@ -13,13 +13,26 @@ Adafruit_DotStar rgb_led(DOTSTAR_NUM, PIN_DOTSTAR_DATA, PIN_DOTSTAR_CLK, DOTSTAR
 Adafruit_MLX90614 ncir_sensor = Adafruit_MLX90614();
 float temperature;
 
+// DMX control
+int dmx_state = 5; // the initial mode of the dmx controller when it is turned on
+
+// current DMX mode colours
+// 5 RED
+// 4 YELLOW
+// 3 PINK
+// 2 PURPLE
+// 1 GREEN
+// 0 BLUE
+
 // simulating button presses with optocouple
-const int button_press_duration = 100;
-const int button_press_interval = 300;
+const int button_press_duration = 75;
+const int button_press_interval = 200;
 
 // colour states
-const int num_states = 5;
-int state = 3; // initial state
+const int num_states = 6;
+int state = 3;                    // initial state
+int state_change_cooldown = 2000; // minimum time (ms) between changing states
+long state_timer = 0;
 
 // temperature calibration
 int pot_adjust;
@@ -52,17 +65,15 @@ void setup() {
    pinMode(BUTTON_UP, OUTPUT);
    pinMode(BUTTON_DOWN, OUTPUT);
 
-   // calculate state temperature thresholds
-   temp_thresholds[0] = temp_midpoint_default - temp_range/2.0;
-   for (int i=1; i < num_states; i++) {
-      temp_thresholds[i] = temp_thresholds[0] + i*temp_range/float(num_states);
-   }
-
    // init NCIR sensor
    if (!ncir_sensor.begin()) {
      Serial.println("Error connecting to NCIR sensor");
      while (1);
    };
+
+   // synchronise the dmx controller
+   delay(2500); // wait for the controller to start up
+   updateDMX();
 }
 
 
@@ -77,12 +88,18 @@ void loop() {
       temp_midpoint_default - (temp_range/2.0), // out_min
       temp_midpoint_default + (temp_range/2.0)  // out_max
       );
+   updateThresholds();
 
-   // update temperature reading
-   temperature = ncir_sensor.readObjectTempC();
-   samples[sample_index] = temperature;
+   // update temperature readings
+   samples[sample_index] = ncir_sensor.readObjectTempC();
    sample_index++;
    sample_index %= num_samples;
+   // calculate average
+   temperature = 0;
+   for (int i=0; i<num_samples; i++) {
+      temperature += samples[i];
+   }
+   temperature /= num_samples;
 
    // detect hand and check for stable reading
    if (temperature > temp_thresholds[0]) {
@@ -101,29 +118,21 @@ void loop() {
    } else {
       stable_reading = false;
    }
+   updateLED();
 
    // set colour state based on temperature reading
    if (hand_detected && stable_reading) {
-      for (int i=0; i<num_states; i++) {
-         if (temperature > temp_thresholds[i]) {
-            state = i;
+      if (millis() - state_timer > state_change_cooldown) {
+         for (int i=0; i<num_states; i++) {
+            if (temperature > temp_thresholds[i]) {
+                  state = i;
+            }
          }
+         state_timer = millis();
+         updateLED();
+         updateDMX();
       }
    }
-
-   // update LED
-   if(hand_detected && !stable_reading) {
-      // set the LED green if a hand is detected
-      rgb_led.setPixelColor(0,255,0,0);
-   } else {
-      // if there is no hand or a new stable reading
-      // set the colour based on the colour state
-      float s = float(state) / float(num_states-1);
-      int red = s*255;
-      int blue = (1-s)*255;
-      rgb_led.setPixelColor(0,0,red,blue);
-   }
-   rgb_led.show();
 
    // print thresholds and readings for debugging
    for (int i=0; i < num_states; i++) {
@@ -140,23 +149,62 @@ void loop() {
 }
 
 
-void modeUp(int n) {
-   for (int i=0; i<n; i++) {
-      digitalWrite(BUTTON_UP, HIGH);
-      delay(button_press_duration);
-      digitalWrite(BUTTON_UP, LOW);
-      delay(button_press_interval);
+// Calculate state temperature thresholds
+void updateThresholds() {
+   temp_thresholds[0] = temp_midpoint - temp_range/2.0;
+   for (int i=1; i < num_states; i++) {
+      temp_thresholds[i] = temp_thresholds[0] + i*temp_range/float(num_states);
    }
 }
 
 
-void modeDown(int n) {
-   for (int i=0; i<n; i++) {
-      digitalWrite(BUTTON_DOWN, HIGH);
-      delay(button_press_duration);
-      digitalWrite(BUTTON_DOWN, LOW);
-      delay(button_press_interval);
+// synchronise the mode of DMX controller with the current colour state
+void updateDMX() {
+   while(dmx_state != state) {
+      if (dmx_state > state) {
+         modeDown();
+      } else {
+         modeUp();
+      }
    }
+}
+
+
+// update the Trinket RGB LED
+void updateLED() {
+   if (!hand_detected) {
+      // turn off LED if no hand is detected
+      rgb_led.setPixelColor(0,0);
+   } else if (hand_detected && !stable_reading) {
+      // set the LED green if a hand is detected
+      rgb_led.setPixelColor(0,255,0,0);
+   } else {
+      // if there is a hand and a new stable reading
+      // set the colour based on the colour state
+      float s = float(state) / float(num_states-1);
+      int red = s*255;
+      int blue = (1-s)*255;
+      rgb_led.setPixelColor(0,0,red,blue);
+   }
+   rgb_led.show();
+}
+
+
+void modeUp() {
+   digitalWrite(BUTTON_UP, HIGH);
+   delay(button_press_duration);
+   digitalWrite(BUTTON_UP, LOW);
+   delay(button_press_interval);
+   dmx_state++;
+}
+
+
+void modeDown() {
+   digitalWrite(BUTTON_DOWN, HIGH);
+   delay(button_press_duration);
+   digitalWrite(BUTTON_DOWN, LOW);
+   delay(button_press_interval);
+   dmx_state--;
 }
 
 
