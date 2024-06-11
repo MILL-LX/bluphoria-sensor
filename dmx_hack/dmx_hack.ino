@@ -14,25 +14,25 @@ Adafruit_MLX90614 ncir_sensor = Adafruit_MLX90614();
 float temperature;
 
 // DMX control
-int dmx_state = 5; // the initial mode of the dmx controller when it is turned on
+int dmx_state = -1; // the initial mode of the dmx controller when it is turned on
 
 // current DMX mode colours
-// 5 RED
-// 4 YELLOW
-// 3 PINK
-// 2 PURPLE
-// 1 GREEN
-// 0 BLUE
+// 3 ?
+// 2 ?
+// 1 ?
+// 0 ?
+// -1 STANDBY
 
 // simulating button presses with optocouple
 const int button_press_duration = 75;
 const int button_press_interval = 200;
 
 // colour states
-const int num_states = 6;
-int state = 3;                    // initial state
+const int num_states = 4;         // number of states excluding standby state (-1)
+int state = -1;                   // initial state
 int state_change_cooldown = 2000; // minimum time (ms) between changing states
 long state_timer = 0;
+const long standby_timeout = 480000; // 8 minutes timeout to return to standby state
 
 // temperature calibration
 const int num_pot_samples = 10;
@@ -42,7 +42,7 @@ float temp_midpoint;
 const float temp_adj_range = 3.0;         // total range of adjustment for the trimpot
 const float temp_midpoint_default = 32.0; // the temperature midpoint when trimpot is at center position
 const float temp_range = 10.0;            // total range of expected temperature readings
-float temp_thresholds[num_states];   // thresholds for the different colour states
+float temp_thresholds[num_states];        // thresholds for the different colour states
 
 // hand detection
 bool hand_detected = false;
@@ -143,14 +143,23 @@ void loop() {
       }
    }
 
-   // print thresholds and readings for debugging
+   // if not in standby, return to standby state if passed standby timeout duration
+   if (state >= 0 && millis() - state_timer > standby_timeout) {
+      state = -1;
+      state_timer = millis();
+      updateLED();
+      updateDMX();
+   }
+
+   // print state, thresholds and readings for debugging
    for (int i=0; i < num_states; i++) {
       Serial.print(temp_thresholds[i]);
       Serial.print('\t');
    }
+   Serial.print(temp_thresholds[0] + (float(state) + 0.5) * temp_range/float(num_states) );
+   Serial.print('\t');
    Serial.print(temperature);
    Serial.println();
-
 
    // regulate sample rate
    delay(100);
