@@ -3,6 +3,8 @@
 # Bluphoria Sensor
 
 https://github.com/MILL-LX/bluephoria-sensor
+Tiago Rorke - MILL Makers in Little Lisbon
+June 2024
 
 Hacking a Daslight DVC FUN DMX interface to allow zone selection ("colour states") 
 based on temperature readings from an NCIR thermometer.
@@ -21,6 +23,21 @@ before setting a colour state based on the temperature thresholds.
 the interface to this standby mode.
 
 The NCIR and trimpot readings are smoothed for added stability.
+
+
+## Libraries
+
+- Adafruit Library for MLX90614 NCIR temperature sensor - https://github.com/adafruit/Adafruit-MLX90614-Library
+- Adafruit DotStar Library - https://github.com/adafruit/Adafruit_DotStar
+
+## Hardware
+
+- Adafruit Trinket M0
+- M5 Stack NCIR module
+- Trimpot
+- 2x 6N139 Optocouples
+- 2x 330R resistors
+
 
 // ------------------------------------------------------------------------- */
 
@@ -71,6 +88,8 @@ int sample_index = 0;
 const float stable_temp_range = 1.0; // acceptable range in samples to constitute a stable reading
 
 
+// ------------------------------------------------------------------------- //
+
 void setup() {
 
    Serial.begin(115200);
@@ -96,6 +115,8 @@ void setup() {
    updateDMX();
 }
 
+
+// ------------------------------------------------------------------------- //
 
 void loop() {
 
@@ -184,6 +205,8 @@ void loop() {
 
 }
 
+
+// ------------------------------------------------------------------------- //
 
 // Calculate state temperature thresholds
 void updateThresholds() {
