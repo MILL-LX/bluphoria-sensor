@@ -2,7 +2,7 @@
 
 # Bluphoria Sensor
 
-https://github.com/MILL-LX/bluephoria-sensor
+https://github.com/MILL-LX/bluphoria-sensor
 Tiago Rorke - MILL Makers in Little Lisbon
 June 2024
 
