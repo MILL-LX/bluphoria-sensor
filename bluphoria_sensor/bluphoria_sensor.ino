@@ -1,3 +1,28 @@
+/* ------------------------------------------------------------------------- //
+
+# Bluphoria Sensor
+
+https://github.com/MILL-LX/bluephoria-sensor
+
+Hacking a Daslight DVC FUN DMX interface to allow zone selection ("colour states") 
+based on temperature readings from an NCIR thermometer.
+
+Two optocouples are used to simulate button presses of the `+` and `-` buttons
+on the interface.
+
+Zones are selected based on temperature thresholds at regular intervals, 
+which can be collectively raised or lowered using the trimpot to adjust 
+to a given environment.
+
+Uses a number of samples from the NCIR sensor to establish a stable reading, 
+before setting a colour state based on the temperature thresholds.
+
+-1 is a "standby mode" colour state. After a time period, the arduino returns 
+the interface to this standby mode.
+
+The NCIR and trimpot readings are smoothed for added stability.
+
+// ------------------------------------------------------------------------- */
 
 #include <Adafruit_MLX90614.h>
 #include <Adafruit_DotStar.h>
@@ -15,13 +40,6 @@ float temperature;
 
 // DMX control
 int dmx_state = -1; // the initial mode of the dmx controller when it is turned on
-
-// current DMX mode colours
-// 3 ?
-// 2 ?
-// 1 ?
-// 0 ?
-// -1 STANDBY
 
 // simulating button presses with optocouple
 const int button_press_duration = 75;
