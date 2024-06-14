@@ -16,7 +16,7 @@ Sensor enclosure: https://cad.onshape.com/documents/3dc8ad7777348520b4033f4c/w/4
 - 2x 6N139 Optocouples
 - 2x 330R resistors
 - Grove connector extension board and grove cable
-- [mini XRL connector](https://mauser.pt/catalog/product_info.php?cPath=1874_640_851&products_id=011-1999)
+- [mini DIN connector](https://mauser.pt/catalog/product_info.php?cPath=1874_640_851&products_id=011-1999)
 - 2m 4-conductor cable
 
 ![](bluphoria_sensor_bb.png)
