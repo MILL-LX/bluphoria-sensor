@@ -57,7 +57,7 @@ float temperature;
 
 // DMX control
 int dmx_state = -1; // the initial mode of the dmx controller when it is turned on
-int reset_state = -2 // kills the fans to reset the mechanics
+int reset_state = -2; // kills the fans to reset the mechanics
 
 // simulating button presses with optocouple
 const int button_press_duration = 75;
