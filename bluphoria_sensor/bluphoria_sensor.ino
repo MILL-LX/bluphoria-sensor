@@ -41,7 +41,7 @@ The NCIR and trimpot readings are smoothed for added stability.
 
 // ------------------------------------------------------------------------- */
 
-#include <Adafruit_MLX90614.h>
+                                                                              #include <Adafruit_MLX90614.h>
 #include <Adafruit_DotStar.h>
 
 #define BUTTON_UP    4
@@ -74,9 +74,9 @@ const int num_pot_samples = 10;
 int pot_adjust[num_pot_samples];
 int pot_sample_index;
 float temp_midpoint;
-const float temp_adj_range = 3.0;         // total range of adjustment for the trimpot
+const float temp_adj_range = 4.0;         // total range of adjustment for the trimpot
 const float temp_midpoint_default = 32.0; // the temperature midpoint when trimpot is at center position
-const float temp_range = 10.0;            // total range of expected temperature readings
+const float temp_range = 8.0;            // total range of expected temperature readings
 float temp_thresholds[num_states];        // thresholds for the different colour states
 
 // hand detection
