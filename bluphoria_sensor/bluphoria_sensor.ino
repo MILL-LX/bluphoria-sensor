@@ -6,21 +6,24 @@ https://github.com/MILL-LX/bluphoria-sensor
 Tiago Rorke - MILL Makers in Little Lisbon
 June 2024
 
-Hacking a Daslight DVC FUN DMX interface to allow zone selection ("colour states") 
+Hacking a Daslight DVC FUN DMX interface to allow zone selection ("colour states")
 based on temperature readings from an NCIR thermometer.
 
 Two optocouples are used to simulate button presses of the `+` and `-` buttons
 on the interface.
 
-Zones are selected based on temperature thresholds at regular intervals, 
-which can be collectively raised or lowered using the trimpot to adjust 
+Zones are selected based on temperature thresholds at regular intervals,
+which can be collectively raised or lowered using the trimpot to adjust
 to a given environment.
 
-Uses a number of samples from the NCIR sensor to establish a stable reading, 
+Uses a number of samples from the NCIR sensor to establish a stable reading,
 before setting a colour state based on the temperature thresholds.
 
--1 is a "standby mode" colour state. After a time period, the arduino returns 
+-1 is a "standby mode" colour state. After a time period, the arduino returns
 the interface to this standby mode.
+
+-2 is a "reset state" that kills the fans for a certain number of seconds to reset the mechanics.
+This is a blocking function so the sensor will be unresponsive during this time.
 
 The NCIR and trimpot readings are smoothed for added stability.
 
@@ -41,7 +44,7 @@ The NCIR and trimpot readings are smoothed for added stability.
 
 // ------------------------------------------------------------------------- */
 
-                                                                              #include <Adafruit_MLX90614.h>
+#include <Adafruit_MLX90614.h>
 #include <Adafruit_DotStar.h>
 
 #define BUTTON_UP    4
@@ -57,7 +60,6 @@ float temperature;
 
 // DMX control
 int dmx_state = -1; // the initial mode of the dmx controller when it is turned on
-int reset_state = -2; // kills the fans to reset the mechanics
 
 // simulating button presses with optocouple
 const int button_press_duration = 75;
@@ -70,6 +72,11 @@ int state_change_cooldown = 2000; // minimum time (ms) between changing states
 long state_timer = 0;
 const long standby_timeout = 480000; // 8 minutes timeout to return to standby state
 
+// reset fans
+int reset_state = -2;
+long reset_timer = 0;
+const long reset_timeout = 5000; // reset state lasts for 5 seconds
+
 // temperature calibration
 const int num_pot_samples = 10;
 int pot_adjust[num_pot_samples];
@@ -77,13 +84,13 @@ int pot_sample_index;
 float temp_midpoint;
 const float temp_adj_range = 4.0;         // total range of adjustment for the trimpot
 const float temp_midpoint_default = 32.0; // the temperature midpoint when trimpot is at center position
-const float temp_range = 8.0;            // total range of expected temperature readings
+const float temp_range = 8.0;             // total range of expected temperature readings
 float temp_thresholds[num_states];        // thresholds for the different colour states
 
 // hand detection
 bool hand_detected = false;
 bool stable_reading = false;
-const int num_samples = 10;          // number of samples to use to establish a stable reading
+const int num_samples = 10; // number of samples to use to establish a stable reading
 float samples[num_samples];
 int sample_index = 0;
 const float stable_temp_range = 1.0; // acceptable range in samples to constitute a stable reading
@@ -132,8 +139,8 @@ void loop() {
    p /= num_pot_samples;
    temp_midpoint = mapfloat(
       p,
-      1023,                                  // in_min (inverted polarity)
-      0,                                     // in_max
+      1023, // in_min (inverted polarity)
+      0,    // in_max
       temp_midpoint_default - (temp_range/2.0), // out_min
       temp_midpoint_default + (temp_range/2.0)  // out_max
       );
@@ -174,11 +181,12 @@ void loop() {
       if (millis() - state_timer > state_change_cooldown) {
          for (int i=0; i<num_states; i++) {
             if (temperature > temp_thresholds[i]) {
-                  state = i;
+               state = i;
             }
          }
          state_timer = millis();
          updateLED();
+         resetFans(state);
          updateDMX();
       }
    }
@@ -208,6 +216,21 @@ void loop() {
 
 
 // ------------------------------------------------------------------------- //
+
+// Reset state
+void resetFans(int new_state) {
+   Serial.println("entering reset state...");
+   state = reset_state;
+   updateDMX();
+   reset_timer = millis();
+   while(millis() - reset_timer < reset_timeout) {
+      delay(10);
+   }
+   Serial.println("leaving reset state.");
+   state_timer = millis();
+   state = new_state;
+}
+
 
 // Calculate state temperature thresholds
 void updateThresholds() {
