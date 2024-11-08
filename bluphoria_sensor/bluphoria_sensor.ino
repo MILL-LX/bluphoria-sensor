@@ -233,7 +233,7 @@ void loop() {
    } else {
 
       // demo mode
-      if (millis() - demo_timer > demo_change_timeout) {
+      if (millis() - demo_timer > demo_timeout) {
          exitDemo();
       } else if (millis() - state_timer > demo_change_timeout) {
          int pstate = state;
