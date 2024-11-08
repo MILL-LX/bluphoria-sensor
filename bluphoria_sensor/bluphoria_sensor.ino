@@ -74,19 +74,19 @@ const int num_states = 4;         // number of states excluding standby state an
 int state = standby_state;        // initial state
 int state_change_cooldown = 2000; // minimum time (ms) between changing states
 long state_timer = 0;
-const long standby_timeout = 120000; // 2 minutes timeout to return to standby state
+const long standby_timeout = 600000; // 10 minutes timeout to return to standby state
 
 // demo mode
 bool demo_mode = false;
 long demo_timer = 0;
-const long demo_timein = 120000;        // go to demo mode after 2 mins in standby mode
-const long demo_change_timeout = 30000; // during demo mode, change colors every 30 seconds
-const long demo_timeout = 420000;       // return to standby mode after 7 mins of demo mode
+const long demo_timein = 1500000;        // go to demo mode after 25 mins in standby mode
+const long demo_change_timeout = 120000; // during demo mode, change colors every 2 Minutes
+const long demo_timeout = 900000;       // return to standby mode after 15 mins of demo mode
 
 // reset fans
 const int reset_state = -1;
 long reset_timer = 0;
-const long reset_timeout = 1500; // reset state lasts for 1.5 seconds
+const long reset_timeout = 200; // reset state lasts for 0.2 seconds
 
 // temperature calibration
 const int num_pot_samples = 10;
