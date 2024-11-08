@@ -25,6 +25,9 @@ the interface to this standby mode.
 -2 is a "reset state" that kills the fans for a certain number of seconds to reset the mechanics.
 This is a blocking function so the sensor will be unresponsive during this time.
 
+After a certain peroid of time without any interaction, enters demo mode where it
+randomly cycles between color states periodically.
+
 The NCIR and trimpot readings are smoothed for added stability.
 
 
@@ -71,6 +74,13 @@ int state = -1;                   // initial state
 int state_change_cooldown = 2000; // minimum time (ms) between changing states
 long state_timer = 0;
 const long standby_timeout = 480000; // 8 minutes timeout to return to standby state
+
+// demo mode
+bool demo_mode = false;
+long demo_timer = 0;
+const long demo_timein = 1500000;       // go to demo mode after 25 mins in standby mode
+const long demo_change_timeout = 30000; // during demo mode, change colors every 30 seconds
+const long demo_timeout = 900000;       // return to standby mode after 15 mins of demo mode
 
 // reset fans
 int reset_state = -2;
@@ -121,6 +131,7 @@ void setup() {
    // synchronise the dmx controller
    delay(2500); // wait for the controller to start up
    updateDMX();
+
 }
 
 
@@ -160,6 +171,9 @@ void loop() {
    // detect hand and check for stable reading
    if (temperature > temp_thresholds[0]) {
       hand_detected = true;
+      if(demo_mode) { // leave demo mode as soon as a hand is detected
+         exitDemo();
+      }
    } else {
       hand_detected = false;
    }
@@ -176,38 +190,63 @@ void loop() {
    }
    updateLED();
 
-   // set colour state based on temperature reading
-   if (hand_detected && stable_reading) {
-      if (millis() - state_timer > state_change_cooldown) {
-         for (int i=0; i<num_states; i++) {
-            if (temperature > temp_thresholds[i]) {
-               state = i;
+   // if not in demo mode
+   if(!demo_mode) {
+
+      // set colour state based on temperature reading
+      if (hand_detected && stable_reading) {
+         if (millis() - state_timer > state_change_cooldown) {
+            for (int i=0; i<num_states; i++) {
+               if (temperature > temp_thresholds[i]) {
+                  state = i;
+               }
             }
+            state_timer = millis();
+            updateLED();
+            resetFans(state);
+            updateDMX();
          }
+      }
+
+      // if not in standby, return to standby state if passed standby timeout duration
+      if (state >= 0 && millis() - state_timer > standby_timeout) {
+         state = -1;
          state_timer = millis();
          updateLED();
+         updateDMX();
+
+      // if in standby mode, check timer for entering demo mode
+      } else if (state == -1 && millis() - state_timer > demo_timein) {
+         enterDemo();
+      }
+
+      // print state, thresholds and readings for debugging
+      for (int i=0; i < num_states; i++) {
+         Serial.print(temp_thresholds[i]);
+         Serial.print('\t');
+      }
+      Serial.print(temp_thresholds[0] + (float(state) + 0.5) * temp_range/float(num_states) );
+      Serial.print('\t');
+      Serial.print(temperature);
+      Serial.println();
+
+   } else {
+
+      // demo mode
+      if (millis() - demo_timer > demo_change_timeout) {
+         exitDemo();
+      } else if (millis() - state_timer > demo_change_timeout) {
+         int pstate = state;
+         while(state == pstate) {
+            state = random(0,num_states);
+         }
+         Serial.print("demoing color state: ");
+         Serial.println(state);
+         state_timer = millis();
          resetFans(state);
          updateDMX();
       }
    }
-
-   // if not in standby, return to standby state if passed standby timeout duration
-   if (state >= 0 && millis() - state_timer > standby_timeout) {
-      state = -1;
-      state_timer = millis();
-      updateLED();
-      updateDMX();
-   }
-
-   // print state, thresholds and readings for debugging
-   for (int i=0; i < num_states; i++) {
-      Serial.print(temp_thresholds[i]);
-      Serial.print('\t');
-   }
-   Serial.print(temp_thresholds[0] + (float(state) + 0.5) * temp_range/float(num_states) );
-   Serial.print('\t');
-   Serial.print(temperature);
-   Serial.println();
 
    // regulate sample rate
    delay(100);
@@ -216,6 +255,26 @@ void loop() {
 
 
 // ------------------------------------------------------------------------- //
+
+// Enter demo mode
+void enterDemo() {
+   Serial.println("entering demo mode.");
+   demo_mode = true;
+   demo_timer = millis();
+   state_timer = millis() - demo_change_timeout;
+   // randomise color state selections
+   randomSeed(analogRead(millis()));
+}
+
+
+// Exit demo mode
+void exitDemo() {
+   Serial.println("leaving demo mode.");
+   demo_mode = false;
+   state = -1;
+   updateDMX();
+}
+
 
 // Reset state
 void resetFans(int new_state) {
