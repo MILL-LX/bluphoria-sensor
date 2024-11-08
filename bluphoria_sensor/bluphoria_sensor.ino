@@ -262,7 +262,7 @@ void enterDemo() {
    Serial.println("entering demo mode.");
    demo_mode = true;
    demo_timer = millis();
-   state_timer = millis() - demo_change_timeout;
+   state_timer = millis() + demo_change_timeout;
    // randomise color state selections
    randomSeed(analogRead(millis()));
 }
