@@ -79,7 +79,7 @@ const long standby_timeout = 120000; // 2 minutes timeout to return to standby s
 // demo mode
 bool demo_mode = false;
 long demo_timer = 0;
-const long demo_timein = 120000;       // go to demo mode after 2 mins in standby mode
+const long demo_timein = 120000;        // go to demo mode after 2 mins in standby mode
 const long demo_change_timeout = 30000; // during demo mode, change colors every 30 seconds
 const long demo_timeout = 420000;       // return to standby mode after 7 mins of demo mode
 
@@ -240,6 +240,7 @@ void loop() {
          int pstate = state;
          while(state == pstate) {
             state = random(0,num_states);
+            delay(10);
          }
          Serial.print("demoing color state: ");
          Serial.println(state);
@@ -264,7 +265,7 @@ void enterDemo() {
    demo_timer = millis();
    state_timer = millis() + demo_change_timeout;
    // randomise color state selections
-   randomSeed(analogRead(millis()));
+   randomSeed(millis());
 }
 
 
