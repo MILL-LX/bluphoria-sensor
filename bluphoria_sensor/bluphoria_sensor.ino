@@ -19,10 +19,10 @@ to a given environment.
 Uses a number of samples from the NCIR sensor to establish a stable reading,
 before setting a colour state based on the temperature thresholds.
 
--1 is a "standby mode" colour state. After a time period, the arduino returns
+-2 is a "standby mode" colour state. After a time period, the arduino returns
 the interface to this standby mode.
 
--2 is a "reset state" that kills the fans for a certain number of seconds to reset the mechanics.
+-1 is a "reset state" that kills the fans for a certain number of seconds to reset the mechanics.
 This is a blocking function so the sensor will be unresponsive during this time.
 
 After a certain peroid of time without any interaction, enters demo mode where it
@@ -62,15 +62,16 @@ Adafruit_MLX90614 ncir_sensor = Adafruit_MLX90614();
 float temperature;
 
 // DMX control
-int dmx_state = -1; // the initial mode of the dmx controller when it is turned on
+const int standby_state = -2;
+int dmx_state = standby_state; // the initial mode of the dmx controller when it is turned on
 
 // simulating button presses with optocouple
 const int button_press_duration = 75;
 const int button_press_interval = 200;
 
 // colour states
-const int num_states = 4;         // number of states excluding standby state (-1)
-int state = -1;                   // initial state
+const int num_states = 4;         // number of states excluding standby state and reset states
+int state = standby_state;        // initial state
 int state_change_cooldown = 2000; // minimum time (ms) between changing states
 long state_timer = 0;
 const long standby_timeout = 480000; // 8 minutes timeout to return to standby state
@@ -83,9 +84,9 @@ const long demo_change_timeout = 30000; // during demo mode, change colors every
 const long demo_timeout = 900000;       // return to standby mode after 15 mins of demo mode
 
 // reset fans
-int reset_state = -2;
+const int reset_state = -1;
 long reset_timer = 0;
-const long reset_timeout = 5000; // reset state lasts for 5 seconds
+const long reset_timeout = 2000; // reset state lasts for 2 seconds
 
 // temperature calibration
 const int num_pot_samples = 10;
@@ -210,13 +211,13 @@ void loop() {
 
       // if not in standby, return to standby state if passed standby timeout duration
       if (state >= 0 && millis() - state_timer > standby_timeout) {
-         state = -1;
+         state = standby_state;
          state_timer = millis();
          updateLED();
          updateDMX();
 
       // if in standby mode, check timer for entering demo mode
-      } else if (state == -1 && millis() - state_timer > demo_timein) {
+      } else if (state == standby_state && millis() - state_timer > demo_timein) {
          enterDemo();
       }
 
@@ -271,7 +272,7 @@ void enterDemo() {
 void exitDemo() {
    Serial.println("leaving demo mode.");
    demo_mode = false;
-   state = -1;
+   state = standby_state;
    updateDMX();
 }
 
